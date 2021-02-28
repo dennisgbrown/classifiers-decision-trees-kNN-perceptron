@@ -1,0 +1,30 @@
+body {
+  background-color: #FFEFD5;
+  color: #000000;
+}
+
+A:link {
+  color: #FF0000;
+}
+
+A:visited {
+  color: #0000FF;
+}
+
+A:active {
+  color: #FF0000;
+}
+
+.number {
+  text-align: right;
+}
+
+th {
+  padding-left: 10pt;
+  padding-right: 10pt;
+}
+
+td {
+  padding-left: 10pt;
+  padding-right: 10pt;
+}
