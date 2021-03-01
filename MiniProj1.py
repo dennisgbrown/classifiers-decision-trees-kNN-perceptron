@@ -6,7 +6,6 @@ Dennis Brown, COMP6636, 03 MAR 2021
 """
 
 import numpy as np
-import copy
 
 
 def libsvm_scale_import(filename):
@@ -14,7 +13,7 @@ def libsvm_scale_import(filename):
     Read data from a libsvm .scale file
     """
     datafile = open(filename, 'r')
-    
+
     # First pass: get dimensions of data
     num_samples = 0
     max_feature_id = 0
@@ -26,7 +25,7 @@ def libsvm_scale_import(filename):
             # print(token)
             feature_id = int(feature.split(':')[0])
             max_feature_id = max(feature_id, max_feature_id)
-       
+
     print(num_samples, 'x', max_feature_id)
 
     # Second pass: read data into array
@@ -35,7 +34,7 @@ def libsvm_scale_import(filename):
     datafile.seek(0)
     for line in datafile:
         tokens = line.split()
-        X[curr_sample][0] = float(tokens[0])        
+        X[curr_sample][0] = float(tokens[0])
         for feature in tokens[1:]:
             # print(token)
             feature_id = int(feature.split(':')[0])
@@ -54,40 +53,41 @@ def get_neighbors(data, test_sample, num_neighbors):
     neighbors, return the closest neighbors.
     """
     # Calculate all distances from the training samples
-    # to this test sample. Collect index, distance
+    # to this test sample. Collect index, distance into a list.
     indices_and_distances = list()
     for i in range(len(data)):
         dist = np.linalg.norm(test_sample[1:] - (data[i])[1:]) # leave out classification at pos 0
         indices_and_distances.append([i, dist])
 
-    # Sort by distance
+    # Sort list by distance
     indices_and_distances.sort(key=lambda _: _[1])
 
-    # Make a list of requested number of closest neighbors
+    # Make a list of requested number of closest neighbors from sorted
+    # list of indices+distances
     neighbors = list()
     for i in range(num_neighbors):
         neighbors.append(indices_and_distances[i][0])
     return neighbors
- 
 
-def predict_classification(data, test_sample, num_neighbors):
+
+def classify_one_sample(data, test_sample, num_neighbors):
     """
-    Given training data, a test sample, and a number of neighbors, 
+    Given training data, a test sample, and a number of neighbors,
     predict which classification the test sample belongs to.
     """
     # Get closest neighbors
     neighbors = get_neighbors(data, test_sample, num_neighbors)
-    
+
     # Create list of classifications of the neighbors
     classifications = list()
     for i in range(len(neighbors)):
         classifications.append(data[neighbors[i]][0]) # 0 = classification
-    
+
     # Return the most common classification of the neighbors
     prediction = max(set(classifications), key = classifications.count)
     return prediction
 
-    
+
 def k_nearest_neighbors(data, test_samples, num_neighbors):
     """
     Given sample data (samples are rows, columns
@@ -97,20 +97,16 @@ def k_nearest_neighbors(data, test_samples, num_neighbors):
     """
     predictions = list()
     for i in range(len(test_samples)):
-        output = predict_classification(data, test_samples[i], num_neighbors)
+        output = classify_one_sample(data, test_samples[i], num_neighbors)
         predictions.append(output)
     return(predictions)
-
-# https://machinelearningmastery.com/tutorial-to-implement-k-nearest-neighbors-in-python-from-scratch/
-
-
 
 
 def trainPerceptron(data, beta, step_limit):
     """
     Perceptron. Given a set of data (samples are rows, columns
-    features, and samples have classifications in position 0), 
-    a learning rate (beta), and a step limit, train and return a 
+    features, and samples have classifications in position 0),
+    a learning rate (beta), and a step limit, train and return a
     weight vector that can be used to classify the given data.
     """
 
@@ -129,7 +125,7 @@ def trainPerceptron(data, beta, step_limit):
     converged = False
     while(not(converged) and (steps < step_limit)):
         converged = True
-        
+
         # For each sample in X, calculate w's classification error
         # and update w.
         for i in range(len(data)):
@@ -171,7 +167,7 @@ def testWeights(data, w):
 
 
 def main():
-    
+
     data = libsvm_scale_import('data/iris.scale')
     # data = libsvm_scale_import('data/a4a')
     # data = libsvm_scale_import('data/a4a.t')
@@ -183,14 +179,14 @@ def main():
     # # Test kNN
     # shuffleData = copy.deepcopy(data)
     # np.random.shuffle(shuffleData)
-    # print(shuffleData[140:])    
+    # print(shuffleData[140:])
     # blah = k_nearest_neighbors(shuffleData[:140], shuffleData[140:], 5)
     # print(blah)
 
-    # Test Perceptron    
+    # Test Perceptron
     w = trainPerceptron(data, .01, 99999)
     testWeights(data, w)
 
 if __name__ == '__main__':
     main()
-    
+
