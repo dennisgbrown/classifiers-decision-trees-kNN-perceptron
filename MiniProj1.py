@@ -30,7 +30,7 @@ def libsvm_scale_import(filename):
 
     # Second pass: read data into arrays
     y = np.zeros(num_samples)
-    x = np.zeros((num_samples, max_feature_id))
+    X = np.zeros((num_samples, max_feature_id))
     curr_sample = 0
     datafile.seek(0)
     for line in datafile:
@@ -40,14 +40,65 @@ def libsvm_scale_import(filename):
             # print(token)
             feature_id = int(feature.split(':')[0]) - 1
             feature_val = float(feature.split(':')[1])
-            x[curr_sample][feature_id] = feature_val
+            X[curr_sample][feature_id] = feature_val
         curr_sample += 1
 
     datafile.close()
-    return y, x
+    return X, y
 
 
-def trainPerceptron(X, Y, beta, step_limit):
+
+def get_neighbors(X, test_sample, num_neighbors):
+    """
+    Given training data, a test sample, and a number of
+    neighbors, return the closest neighbors.
+    """
+    # Calculate all distances from the training samples
+    # to this test sample. Collect index, distance
+    indices_and_distances = list()
+    for i in range(len(X)):
+        indices_and_distances.append([i, np.linalg.norm(test_sample - X[i])])
+    # Sort by distance
+    indices_and_distances.sort(key=lambda _: _[1])
+    # Make a list of requested number of closest neighbors
+    neighbors = list()
+    for i in range(num_neighbors):
+        neighbors.append(indices_and_distances[i][0])
+    return neighbors
+ 
+
+def predict_classification(X, y, test_sample, num_neighbors):
+    """
+    Given training data, classification data, a test sample, 
+    and a number of neighbors, predict which classification
+    the test sample belongs to.
+    """
+    neighbors = get_neighbors(X, test_sample, num_neighbors)
+    output_values = list()
+    for i in range(len(neighbors)):
+        output_values.append(y[neighbors[i]])
+    prediction = max(set(output_values), key=output_values.count)
+    return prediction
+
+    
+def k_nearest_neighbors(X, y, test_samples, num_neighbors):
+    """
+    Given training data, classification data, test data, 
+    and a number of neighbors, predict which classification
+    each test sample belongs to.
+    """
+    predictions = list()
+    for i in range(len(test_samples)):
+        output = predict_classification(X, y, test_samples[i], num_neighbors)
+        predictions.append(output)
+    return(predictions)
+
+# https://machinelearningmastery.com/tutorial-to-implement-k-nearest-neighbors-in-python-from-scratch/
+
+
+
+
+def trainPerceptron(X, y, beta, step_limit):
     """
     Perceptron. Given a 2-D set of data X (samples are rows, columns
     features), a vector Y of classifications, a learning rate (beta),
@@ -59,7 +110,7 @@ def trainPerceptron(X, Y, beta, step_limit):
     w = np.zeros(len(X[0]) + 1)
 
     # Initialize Y_hat
-    Y_hat = np.zeros(len(X))
+    y_hat = np.zeros((len(X), 1))
 
     # Repeat the main loop until we have convergence or reach the
     # iteration limit
@@ -72,14 +123,14 @@ def trainPerceptron(X, Y, beta, step_limit):
         for i in range(len(X)):
             # Add a 1 to the front of every term to account for w's bias
             sample = np.insert(X[i], 0, 1)
-            Y_hat[i] = 1 if (np.matmul(w.T, sample) > 0) else -1
-            error = Y[i] - Y_hat[i]
+            y_hat[i] = 1 if (np.matmul(w.T, sample) > 0) else -1
+            error = y[i] - y_hat[i]
             w += sample * error * beta
             steps += 1
 
-        # If the difference between Y ajd Y_hat is effectively 0,
+        # If the difference between y and y_hat is effectively 0,
         # consider it converged.
-        if (np.linalg.norm(Y - Y_hat) < .0000001):
+        if (np.linalg.norm(y - y_hat) < .0000001):
             converged = True
 
     print('Final w = ', w, 'in', steps, 'steps; converged?', converged)
@@ -87,46 +138,34 @@ def trainPerceptron(X, Y, beta, step_limit):
     return w
 
 
-def testPerceptron(X, Y, w):
-    Y_hat = np.zeros(len(Y))
+def testWeights(X, y, w):
+    y_hat = np.zeros(len(y))
     for i in range(len(X)):
         sample = np.insert(X[i], 0, 1)
-        Y_hat[i] = 1 if (np.matmul(w.T, sample) > 0) else -1
-    print('Y   :', Y)
-    print('Y^  :', Y_hat)
-    print('Diff:', Y - Y_hat)
+        y_hat[i] = 1 if (np.matmul(w.T, sample) > 0) else -1
+    print('y   :', y)
+    print('y^  :', y_hat)
+    print('Diff:', y - y_hat)
+    print('sum Diff', sum(y - y_hat))
+
+
 
 
 
 def main():
     
-    # y, x = libsvm_scale_import('data/iris.scale')
-    y, x = libsvm_scale_import('data/a4a')
-    # y, x = libsvm_scale_import('data/a4a.t')
+    X, y = libsvm_scale_import('data/iris.scale')
+    # X, y = libsvm_scale_import('data/a4a')
+    # X, y = libsvm_scale_import('data/a4a.t')
 
-    print(x)
-    
-    # Test it out
-    
-    # # XOR does not converge
-    # X = np.array([[0, 0],
-    #               [0, 1],
-    #               [1, 0],
-    #               [1, 1]])
-    # Y = np.array([1, -1, -1, 1])
-    
-    # # Augmented XOR does converge
-    # X = np.array([[0, 0, 1, 0, 0, 0],
-    #               [0, 1, 0, 1, 0, 0],
-    #               [1, 0, 0, 0, 1, 0],
-    #               [1, 1, 0, 0, 0, 1]])
-    # Y = np.array([1, -1, -1, 1])
-    
-    # w = trainPerceptron(X, Y, .01, 9999)
-    # testPerceptron(X, Y, w)
+    print(X)
 
-    w = trainPerceptron(x, y, .01, 9999)
-    testPerceptron(x, y, w)
+
+    blah = k_nearest_neighbors(X[:100], y[:100], X[100:], 5)
+    print(blah)
+    
+    # w = trainPerceptron(X, y, .01, 99999)
+    # testWeights(X, y, w)
 
 if __name__ == '__main__':
     main()
