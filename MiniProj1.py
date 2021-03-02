@@ -100,7 +100,7 @@ def k_nearest_neighbors(data, test_samples, num_neighbors):
     for i in range(len(test_samples)):
         output = classify_one_sample(data, test_samples[i], num_neighbors)
         classifications.append(output)
-        if ((i % 20) == 0): 
+        if ((i % 20) == 0):
             print('\rknn test sample', i, end='')
     print()
     return(classifications)
@@ -165,7 +165,7 @@ def train_perceptron(data, beta, step_limit):
 def test_weights(data, w):
     """
     Given test data and a weight vector w, determine the error rate
-    when classifying the test data using the weights. 
+    when classifying the test data using the weights.
     """
     misclassifications = 0
 
@@ -174,7 +174,7 @@ def test_weights(data, w):
 
     # Slice off y
     y = data[:,0]
-    
+
     # Determine how weights classify each test sample and count
     # misclassifications
     for i in range(len(data)):
@@ -182,7 +182,7 @@ def test_weights(data, w):
         biased_sample[0] = 1
         y_hat[i] = 1 if (np.matmul(w.T, biased_sample) > 0) else -1
         if (y[i] != y_hat[i]):
-            misclassifications += 1        
+            misclassifications += 1
 
     print(misclassifications, 'errors in', len(y), 'samples')
     # print('y   :', y)
@@ -197,24 +197,24 @@ def iris_knn(num_neighbors):
     """
     # Load data
     iris_data = libsvm_scale_import('data/iris.scale')
-    
+
     # Shuffle the data because otherwise we can't effectively split it
-    # into training & test 
+    # into training & test
     shuffle_data = copy.deepcopy(iris_data)
-    np.random.seed(1) # ensure consistent shuffling 
+    np.random.seed(1) # ensure consistent shuffling
     np.random.shuffle(shuffle_data)
-    
+
     # Split up data into training and test data based on split value
     split = 100
     train_data = shuffle_data[:split]
     test_data = shuffle_data[split:]
 
-    # Classify the test data    
+    # Classify the test data
     classifications = k_nearest_neighbors(train_data, test_data, num_neighbors)
-    
+
     # Check accuracy
     check_knn_classifications(test_data[:,0], classifications)
-    
+
 
 def iris_perceptron():
     """
@@ -222,26 +222,26 @@ def iris_perceptron():
     """
     # Load data
     iris_data = libsvm_scale_import('data/iris.scale')
-    
+
     # Pass 1: Classify all the data into "1" vs "2 and 3" by setting
     # all "2" and "3" classifications to "-1"
     pass1_data = copy.deepcopy(iris_data)
     for i in range(len(pass1_data)):
         if (pass1_data[i][0] != 1):
-            pass1_data[i][0] = -1    
+            pass1_data[i][0] = -1
     w = train_perceptron(pass1_data, 0.01, 999)
     test_weights(pass1_data, w)
 
     # Pass 2: Classify the "2 and 3" data into "2" vs "3"
     # First remove all "1" samples
     pass2_data = copy.deepcopy(iris_data[np.where(iris_data[:,0] > 1)])
-    # Next, set all "2" samples to "1" and "3" to "-1"    
+    # Next, set all "2" samples to "1" and "3" to "-1"
     for i in range(len(pass2_data)):
         if (pass2_data[i][0] == 2):
             pass2_data[i][0] = 1
         elif (pass2_data[i][0] == 3):
             pass2_data[i][0] = -1
-    w = train_perceptron(pass2_data, 0.01, 999)
+    w = train_perceptron(pass2_data, 0.01, 99999)
     test_weights(pass2_data, w)
 
 
@@ -251,18 +251,18 @@ def a4a_knn(num_neighbors):
     """
 
     # Load data
-    train_data = libsvm_scale_import('data/a4a')    
+    train_data = libsvm_scale_import('data/a4a')
     test_data = libsvm_scale_import('data/a4a.t')
 
     # Subsample test data because it's huge
-    test_data = test_data[::100]
+    # test_data = test_data[::100]
 
     # Training data has 1 fewer feature than test data, so add a column
     # of zeros to it so samples have same number of features in train and test
     zero_col = np.zeros((len(train_data), 1))
     train_data = np.hstack((train_data, zero_col))
 
-    # Classify the test data    
+    # Classify the test data
     classifications = k_nearest_neighbors(train_data, test_data, num_neighbors)
 
     # Check accuracy
@@ -274,7 +274,7 @@ def a4a_perceptron():
     Run Perceptron on the a4a dataset for the given number of neighbors.
     """
     # Load data
-    train_data = libsvm_scale_import('data/a4a')    
+    train_data = libsvm_scale_import('data/a4a')
     test_data = libsvm_scale_import('data/a4a.t')
 
     # Training data has 1 fewer feature than test data, so add a column
@@ -284,16 +284,16 @@ def a4a_perceptron():
 
     w = train_perceptron(train_data, 0.01, 999)
     test_weights(test_data, w)
-    
+
 
 def main():
 
-    # iris_knn(5)    
+    # iris_knn(5)
 
-    iris_perceptron()
+    # iris_perceptron()
 
-    # a4a_knn(5)
-    
+    a4a_knn(5)
+
     # a4a_perceptron()
 
 
