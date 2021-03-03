@@ -366,14 +366,13 @@ def a4a_knn():
     results = np.zeros(len(test_ks))
     for i in range(len(test_ks)):
         print('Classify with k =', test_ks[i])
-        # # Classify the test data
-        # classifications = k_nearest_neighbors(train_data, test_data,
-        #                                       test_ks[i])
-        # # Check accuracy
-        # errors = check_knn_classifications(test_data[:,0], classifications)
-        # results[i] = (1.0 - (errors / test_data.shape[0])) * 100.0
-        # print(errors, 'errors in', test_data.shape[0], 'samples')
-        results[i] = i
+        # Classify the test data
+        classifications = k_nearest_neighbors(train_data, test_data,
+                                              test_ks[i])
+        # Check accuracy
+        errors = check_knn_classifications(test_data[:,0], classifications)
+        results[i] = (1.0 - (errors / test_data.shape[0])) * 100.0
+        print(errors, 'errors in', test_data.shape[0], 'samples')
 
     plt.clf()
     plt.plot(test_ks, results, marker='.')
