@@ -7,6 +7,7 @@ Dennis Brown, COMP6636, 03 MAR 2021
 
 import numpy as np
 import copy
+import matplotlib.pyplot as plt
 
 
 def libsvm_scale_import(filename):
@@ -19,11 +20,9 @@ def libsvm_scale_import(filename):
     num_samples = 0
     max_feature_id = 0
     for line in datafile:
-        # print(line)
         num_samples += 1
         tokens = line.split()
         for feature in tokens[1:]:
-            # print(token)
             feature_id = int(feature.split(':')[0])
             max_feature_id = max(feature_id, max_feature_id)
 
@@ -35,14 +34,13 @@ def libsvm_scale_import(filename):
         tokens = line.split()
         data[curr_sample][0] = float(tokens[0])
         for feature in tokens[1:]:
-            # print(token)
             feature_id = int(feature.split(':')[0])
             feature_val = float(feature.split(':')[1])
             data[curr_sample][feature_id] = feature_val
         curr_sample += 1
     datafile.close()
 
-    print(filename, ':', data.shape)
+    print('LOADED:', filename, ':', data.shape)
 
     return data
 
@@ -103,15 +101,21 @@ def k_nearest_neighbors(data, test_samples, num_neighbors):
         if ((i % 20) == 0):
             print('\rknn test sample', i, end='')
     print()
+
     return(classifications)
 
 
 def check_knn_classifications(y, y_hat):
-    misclassifications = 0
+    """
+    Given actual values y and classiciations y_hat,
+    return the number of num_misclass
+    """
+    num_misclass = 0
     for i in range(len(y)):
         if (y[i] != y_hat[i]):
-            misclassifications += 1
-    print(misclassifications, 'errors in', len(y), 'samples')
+            num_misclass += 1
+
+    return num_misclass
 
 
 def train_perceptron(data, beta, step_limit):
@@ -157,17 +161,63 @@ def train_perceptron(data, beta, step_limit):
             if (abs(error) > 0.000001):
                 converged = False
 
-    print('Final w = ', w, 'in', steps, 'steps; converged?', converged)
+    print('Perceptron:' ,steps, 'steps; converged?', converged)
 
     return w
 
 
-def test_weights(data, w):
+def multiclass_train_perceptron(data, beta, step_limit):
     """
-    Given test data and a weight vector w, determine the error rate
-    when classifying the test data using the weights.
+    Perceptron. Given a set of data (samples are rows, columns
+    features, and samples have classifications in position 0),
+    a learning rate (beta), and a step limit, train and return a
+    weight vector that can be used to classify the given data.
+
+    This version works on data with multiple classes by one-vs-rest.
     """
-    misclassifications = 0
+    # Find unique classes
+    classes = []
+    for i in range(data.shape[0]):
+        if (not(data[i][0] in classes)):
+            classes.append(data[i][0])
+
+    # For each classification, train perceptron on current class vs.
+    # rest of the untrained classes.
+    ws = []
+    curr_data = copy.deepcopy(data)
+    for curr_class in range(len(classes) - 1):
+
+        # Save original classification data
+        orig_classes = copy.deepcopy(curr_data[:,0])
+
+        # Reset classification data to 1 (for current class) or -1 for other
+        for i in range(curr_data.shape[0]):
+            if (curr_data[i][0] == classes[curr_class]):
+                curr_data[i][0] = 1
+            else:
+                curr_data[i][0] = -1
+
+        # Train and find weights
+        ws.append(train_perceptron(curr_data, beta, step_limit))
+
+        # Put original classifications back
+        for i in range(curr_data.shape[0]):
+            curr_data[i][0] = orig_classes[i]
+
+        # Set up for the next class
+        curr_data = copy.deepcopy(curr_data[np.where(curr_data[:,0] \
+                                                      != classes[curr_class])])
+
+    return ws
+
+
+def test_perceptron(data, w):
+    """
+    Given test data and a weight vector w, return number of
+    num_misclass when classifying the test data using the
+    weights.
+    """
+    num_misclass = 0
 
     # Initialize y_hat
     y_hat = np.zeros(len(data))
@@ -176,25 +226,67 @@ def test_weights(data, w):
     y = data[:,0]
 
     # Determine how weights classify each test sample and count
-    # misclassifications
+    # num_misclass
     for i in range(len(data)):
         biased_sample = np.copy(data[i])
         biased_sample[0] = 1
         y_hat[i] = 1 if (np.matmul(w.T, biased_sample) > 0) else -1
         if (y[i] != y_hat[i]):
-            misclassifications += 1
+            num_misclass += 1
 
-    print(misclassifications, 'errors in', len(y), 'samples')
-    # print('y   :', y)
-    # print('y^  :', y_hat)
-    # print('Diff:', y - y_hat)
-    # print('sum Diff', sum(y - y_hat))
+    return num_misclass
 
 
-def iris_knn(num_neighbors):
+def multiclass_test_perceptron(data, ws):
     """
-    Run kNN on the iris dataset for the given number of neighbors.
+    Given test data and a weight vector w, return number of
+    num_misclass when classifying the test data using the
+    weights.
+
+    This version works on data with multiple classes by one-vs-rest.
     """
+    # Find unique classes
+    classes = []
+    for i in range(data.shape[0]):
+        if (not(data[i][0] in classes)):
+            classes.append(data[i][0])
+
+    # For each classification, test perceptron on current class vs.
+    # rest of the untested classes.
+    num_misclass = []
+    curr_data = copy.deepcopy(data)
+    for curr_class in range(len(classes) - 1):
+
+        # Save original classification data
+        orig_classes = copy.deepcopy(curr_data[:,0])
+
+        # Reset classification data to 1 (for current class) or -1 for other
+        for i in range(curr_data.shape[0]):
+            if (curr_data[i][0] == classes[curr_class]):
+                curr_data[i][0] = 1
+            else:
+                curr_data[i][0] = -1
+
+        # Train and find weights
+        num_misclass.append(test_perceptron(curr_data, ws[curr_class]))
+
+        # Put original classifications back
+        for i in range(curr_data.shape[0]):
+            curr_data[i][0] = orig_classes[i]
+
+        # Set up for the next class
+        curr_data = copy.deepcopy(curr_data[np.where(curr_data[:,0] \
+                                                      != classes[curr_class])])
+
+    return num_misclass
+
+
+def iris_knn():
+    """
+    Run kNN on the iris dataset for the various numbers of neighbors.
+    """
+    print("----------\niris kNN")
+
     # Load data
     iris_data = libsvm_scale_import('data/iris.scale')
 
@@ -205,74 +297,98 @@ def iris_knn(num_neighbors):
     np.random.shuffle(shuffle_data)
 
     # Split up data into training and test data based on split value
-    split = 100
+    split = 50
     train_data = shuffle_data[:split]
     test_data = shuffle_data[split:]
 
-    # Classify the test data
-    classifications = k_nearest_neighbors(train_data, test_data, num_neighbors)
+    # Test multiple values of k
+    test_ks = np.array([1, 3, 5, 11, 21, 31, 41, 49])
+    results = np.zeros(len(test_ks))
+    for i in range(len(test_ks)):
+        # Classify the test data
+        print('Classify with k =', test_ks[i])
+        classifications = k_nearest_neighbors(train_data, test_data,
+                                              test_ks[i])
+        # Check accuracy
+        errors = check_knn_classifications(test_data[:,0], classifications)
+        results[i] = (1.0 - (errors / test_data.shape[0])) * 100.0
+        print(errors, 'errors in', test_data.shape[0], 'samples')
 
-    # Check accuracy
-    check_knn_classifications(test_data[:,0], classifications)
+    plt.plot(test_ks, results)
+    plt.savefig('iris_knn.png', dpi = 600)
+    plt.title('Iris kNN: % Correctly Classified vs. k')
+    plt.xlabel('k')
+    plt.ylabel('% correctly classified')
+    plt.xlim(left = 0)
+    plt.ylim(bottom = 0)
+    plt.grid(True)
 
 
 def iris_perceptron():
     """
-    Run Perceptron on the iris dataset for the given number of neighbors.
+    Run Perceptron on the iris dataset in various ways.
     """
+    print("----------\niris Perceptron")
+
     # Load data
-    iris_data = libsvm_scale_import('data/iris.scale')
+    data = libsvm_scale_import('data/iris.scale')
 
-    # Pass 1: Classify all the data into "1" vs "2 and 3" by setting
-    # all "2" and "3" classifications to "-1"
-    pass1_data = copy.deepcopy(iris_data)
-    for i in range(len(pass1_data)):
-        if (pass1_data[i][0] != 1):
-            pass1_data[i][0] = -1
-    w = train_perceptron(pass1_data, 0.01, 999)
-    test_weights(pass1_data, w)
+    ws = multiclass_train_perceptron(data, 0.01, 99999)
 
-    # Pass 2: Classify the "2 and 3" data into "2" vs "3"
-    # First remove all "1" samples
-    pass2_data = copy.deepcopy(iris_data[np.where(iris_data[:,0] > 1)])
-    # Next, set all "2" samples to "1" and "3" to "-1"
-    for i in range(len(pass2_data)):
-        if (pass2_data[i][0] == 2):
-            pass2_data[i][0] = 1
-        elif (pass2_data[i][0] == 3):
-            pass2_data[i][0] = -1
-    w = train_perceptron(pass2_data, 0.01, 99999)
-    test_weights(pass2_data, w)
+    num_misclass = multiclass_test_perceptron(data, ws)
+    # samples, errors, w1, w2 = iris_perceptron(0.01, 9999)
+    # print(samples, errors, w1, w2)
+
+    print(num_misclass, 'errors in', data.shape[0], 'samples')
 
 
-def a4a_knn(num_neighbors):
+def a4a_knn():
     """
-    Run kNN on the a4a dataset for the given number of neighbors.
+    Run kNN on the a4a dataset for various numbers of neighbors.
     """
+    print("----------\na4a kNN")
 
     # Load data
     train_data = libsvm_scale_import('data/a4a')
     test_data = libsvm_scale_import('data/a4a.t')
 
     # Subsample test data because it's huge
-    # test_data = test_data[::100]
+    # test_data = test_data[::10000]
 
     # Training data has 1 fewer feature than test data, so add a column
     # of zeros to it so samples have same number of features in train and test
     zero_col = np.zeros((len(train_data), 1))
     train_data = np.hstack((train_data, zero_col))
 
-    # Classify the test data
-    classifications = k_nearest_neighbors(train_data, test_data, num_neighbors)
+    # Test multiple values of k
+    test_ks = np.array([1, 3, 5, 11, 21, 31, 41, 51, 61, 71, 81, 91, 101, 201, 301, 401, 501, 601, 701, 801, 901, 1001])
+    results = np.zeros(len(test_ks))
+    for i in range(len(test_ks)):
+        print('Classify with k =', test_ks[i])
+        # Classify the test data
+        classifications = k_nearest_neighbors(train_data, test_data,
+                                              test_ks[i])
+        # Check accuracy
+        errors = check_knn_classifications(test_data[:,0], classifications)
+        results[i] = (1.0 - (errors / test_data.shape[0])) * 100.0
+        print(errors, 'errors in', test_data.shape[0], 'samples')
 
-    # Check accuracy
-    check_knn_classifications(test_data[:,0], classifications)
+    plt.plot(test_ks, results)
+    plt.title('a4a kNN: % Correctly Classified vs. k')
+    plt.xlabel('k')
+    plt.ylabel('% correctly classified')
+    plt.xlim(left = 0)
+    plt.ylim(bottom = 0)
+    plt.grid(True)
+    plt.savefig('a4a_knn.png', dpi = 600)
 
 
 def a4a_perceptron():
     """
-    Run Perceptron on the a4a dataset for the given number of neighbors.
+    Run Perceptron on the a4a dataset in various ways.
     """
+    print("----------\na4a Perceptron")
+
     # Load data
     train_data = libsvm_scale_import('data/a4a')
     test_data = libsvm_scale_import('data/a4a.t')
@@ -282,19 +398,20 @@ def a4a_perceptron():
     zero_col = np.zeros((len(train_data), 1))
     train_data = np.hstack((train_data, zero_col))
 
-    w = train_perceptron(train_data, 0.01, 999)
-    test_weights(test_data, w)
+    # Train and find weights
+    w = train_perceptron(train_data, 0.01, 9999)
+
+    # Check accuracy
+    num_misclass = test_perceptron(test_data, w)
+
+    print(num_misclass, 'errors in', test_data.shape[0], 'samples')
 
 
 def main():
-
-    # iris_knn(5)
-
-    # iris_perceptron()
-
-    a4a_knn(5)
-
-    # a4a_perceptron()
+    iris_knn()
+    iris_perceptron()
+    a4a_knn()
+    a4a_perceptron()
 
 
 if __name__ == '__main__':
