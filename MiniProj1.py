@@ -314,14 +314,15 @@ def iris_knn():
         results[i] = (1.0 - (errors / test_data.shape[0])) * 100.0
         print(errors, 'errors in', test_data.shape[0], 'samples')
 
-    plt.plot(test_ks, results)
-    plt.savefig('iris_knn.png', dpi = 600)
+    plt.clf()
+    plt.plot(test_ks, results, marker='.')
     plt.title('Iris kNN: % Correctly Classified vs. k')
     plt.xlabel('k')
     plt.ylabel('% correctly classified')
     plt.xlim(left = 0)
     plt.ylim(bottom = 0)
     plt.grid(True)
+    plt.savefig('iris_knn.png', dpi = 600)
 
 
 def iris_perceptron():
@@ -365,15 +366,17 @@ def a4a_knn():
     results = np.zeros(len(test_ks))
     for i in range(len(test_ks)):
         print('Classify with k =', test_ks[i])
-        # Classify the test data
-        classifications = k_nearest_neighbors(train_data, test_data,
-                                              test_ks[i])
-        # Check accuracy
-        errors = check_knn_classifications(test_data[:,0], classifications)
-        results[i] = (1.0 - (errors / test_data.shape[0])) * 100.0
-        print(errors, 'errors in', test_data.shape[0], 'samples')
+        # # Classify the test data
+        # classifications = k_nearest_neighbors(train_data, test_data,
+        #                                       test_ks[i])
+        # # Check accuracy
+        # errors = check_knn_classifications(test_data[:,0], classifications)
+        # results[i] = (1.0 - (errors / test_data.shape[0])) * 100.0
+        # print(errors, 'errors in', test_data.shape[0], 'samples')
+        results[i] = i
 
-    plt.plot(test_ks, results)
+    plt.clf()
+    plt.plot(test_ks, results, marker='.')
     plt.title('a4a kNN: % Correctly Classified vs. k')
     plt.xlabel('k')
     plt.ylabel('% correctly classified')
