@@ -397,10 +397,6 @@ def a4a_knn():
         error_rates[i] = errors / test_data.shape[0]
         print(errors, 'errors in', test_data.shape[0], 'samples')
 
-    # # Here is the data pre-computed.
-    # errors = np.array([5937,5238,5028,4769,4663,4639,4626,4664,4656,4668,4695,4714,4721,4845,4871,4911,4940,4980,5007,5052,5109,5227])
-    # error_rates = errors / test_data.shape[0]
-
     print('ks:', test_ks)
     print('error rates:', error_rates)
     plt.clf()
